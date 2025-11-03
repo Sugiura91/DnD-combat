@@ -51,7 +51,13 @@ button:hover { background:#666; }
   padding:10px;
   margin-bottom:8px;
   position:relative;
+  transition: transform 0.6s ease, opacity 0.2s ease;
 }
+
+.participant.moving {
+  opacity: 0.6;
+}
+
 .participant.active {
   border: 2px solid #00bcd4;
   background: #2f2f3f;
@@ -778,17 +784,46 @@ function removeParticipant(id){
 }
 
 // Déplacer participant ↑/↓
-function moveUp(index){
-  if(index <= 0) return;
-  const p = data.combat.participants;
-  [p[index-1], p[index]] = [p[index], p[index-1]];
-  saveData(); renderCombat();
+function moveUp(index) {
+  if (index <= 0) return;
+  animateMove(index, index - 1);
 }
-function moveDown(index){
+
+function moveDown(index) {
   const p = data.combat.participants;
-  if(index >= p.length-1) return;
-  [p[index], p[index+1]] = [p[index+1], p[index]];
-  saveData(); renderCombat();
+  if (index >= p.length - 1) return;
+  animateMove(index, index + 1);
+}
+
+function animateMove(fromIndex, toIndex) {
+  const list = document.getElementById("combatList");
+  const items = Array.from(list.children);
+
+  const fromEl = items[fromIndex];
+  const toEl = items[toIndex];
+
+  // Position initiale pour l'animation
+  const fromRect = fromEl.getBoundingClientRect();
+  const toRect = toEl.getBoundingClientRect();
+
+  const dy = toRect.top - fromRect.top;
+
+  // Animation
+  fromEl.style.transform = `translateY(${dy}px)`;
+  toEl.style.transform = `translateY(${-dy}px)`;
+  fromEl.classList.add("moving");
+  toEl.classList.add("moving");
+
+  // Après l’animation, échanger les éléments dans les données
+  setTimeout(() => {
+    data.combat.participants.splice(
+      toIndex,
+      0,
+      data.combat.participants.splice(fromIndex, 1)[0]
+    );
+    saveData();
+    renderCombat();
+  }, 600);
 }
 
 // Supprimer buff
