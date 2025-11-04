@@ -223,8 +223,9 @@ button.remove-small:hover {
   margin:0;
 }
 
-/* === Styles pour la gestion des PV en modal === */
-#hpModal .pv-control {
+/* === Styles pour la gestion des PV, SP, et Init en modal === */
+#hpModal .pv-control,
+#initModal .init-control{
   display: flex;
   align-items: center;
   justify-content: center;
@@ -232,7 +233,8 @@ button.remove-small:hover {
   margin: 12px 0;
 }
 
-#hpModal .pv-display {
+#hpModal .pv-display,
+#initModal .init-display {
   flex: 0 0 auto;
   width: 170px;
   max-width: 50%;
@@ -245,35 +247,21 @@ button.remove-small:hover {
   font-weight: bold;
 }
 
-#hpModal .small {
-  padding: 4px 10px;
-  font-size: 0.9rem;
-}
-
-/* Gestion Initiative modal */
-#initModal .init-control {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  margin: 12px 0;
-}
-
-#initModal .init-display {
-  flex: 0 0 auto;
-  min-width: 50px;
-  text-align: center;
-  padding: 6px;
-  background: #333;
-  border-radius: 6px;
-  border: 1px solid #555;
-  color: #fff;
-  font-weight: bold;
-}
-
+#hpModal .small,
 #initModal .small {
   padding: 4px 10px;
   font-size: 0.9rem;
+}
+
+/* Modale confirmation */
+#confirmModal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 400; /* <-- plus haut que hpModal */
 }
 
 .modal-field {
@@ -300,15 +288,86 @@ button.remove-small:hover {
   color: #fff;
 }
 
+/* Ligne PV + Initiative dans le modal */
+.pv-init-row {
+  display: flex;
+  gap: 18px;          /* Moins grand espace pour éviter de dépasser */
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Chaque champ prend exactement la moitié de la ligne */
+.pv-init-row label {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+/* Empêche les inputs de déborder */
+.pv-init-row input {
+  width: 100%;
+  text-align: center;
+  box-sizing: border-box;
+}
+
 .modal {
   position: fixed; inset: 0; display: none;
   align-items: center; justify-content: center;
   background: rgba(0,0,0,0.6); z-index: 300;
 }
+
 .modal-content {
-  background: #222; padding: 20px;
-  border-radius: 10px; width: 100%;
-  max-width: 340px; text-align: center;
+  position: relative; /* ✅ permet au bouton de se positionner relativement au modale */
+  background: #222;
+  padding: 20px;
+  border-radius: 10px;
+  width: 90%;
+  max-width: 400px;
+  text-align: center;
+}
+
+.modal-buttons {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 16px;
+  gap: 12px;
+}
+
+.modal-buttons button {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+
+.modal-buttons .cancel {
+  background: #444;
+  color: #bbb;
+  border: 1px solid #666;
+}
+
+.modal-buttons .validate {
+  background: #4caf50;
+  color: #fff;
+  border: 1px solid #3a8b3d;
+}
+
+.reset-btn {
+  position: absolute;
+  align-items: right;
+  top: 8px;
+  right: 8px;
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  color: #bbb;
+  cursor: pointer;
+  padding: 0;
+}
+.reset-btn:hover {
+  background: #fff;
 }
 
 .hp-bar-container {
@@ -385,9 +444,7 @@ h2{font-size:1.1rem;} button{font-size:0.9rem;} input,select{font-size:0.9rem;}
     <div class="combat-top">
       <div class="flex">
         <select id="charSelect"></select>
-        <select id="initInput">
-          <option value="" disabled selected>Jet d'initiative</option>
-        </select>
+        <input id="initInput" type="number" inputmode="numeric" pattern="[0-9]*" placeholder="Jet d'initiative" onfocus="this.select()">
         <button id="addToCombat">Rejoindre !</button>
       </div>
 
@@ -482,8 +539,8 @@ h2{font-size:1.1rem;} button{font-size:0.9rem;} input,select{font-size:0.9rem;}
 <div id="confirmModal">
   <div id="confirmBox">
     <p id="confirmText"></p>
-    <button id="confirmYes" style="background:#b33;">Oui</button>
     <button id="confirmNo">Non</button>
+    <button id="confirmYes" style="background:#b33;">Oui</button>
   </div>
 </div>
 
@@ -500,13 +557,15 @@ h2{font-size:1.1rem;} button{font-size:0.9rem;} input,select{font-size:0.9rem;}
         <label>Race : </label>
         <input id="editCharRace" placeholder="Race">
       </div>
-      <div class="modal-field" id="modalHpField">
-        <label>PV : </label>
-        <input id="editCharHp" type="number" placeholder="PV max">
-      </div>
-      <div class="modal-field">
-        <label>Initiative : </label>
-        <input id="editCharInit" type="number" placeholder="Initiative de base">
+      <div class="pv-init-row">
+        <div class="modal-field" id="modalHpField">
+          <label>PV : </label>
+          <input id="editCharHp" type="number" inputmode="numeric" pattern="[0-9]*" placeholder="PV max" onfocus="this.select()">
+        </div>
+        <div class="modal-field">
+          <label>Initiative : </label>
+          <input id="editCharInit" type="number" inputmode="numeric" pattern="[0-9]*" placeholder="Initiative de base" onfocus="this.select()">
+        </div>
       </div>
     </div>
     <div style="display:flex;justify-content:space-between;margin-top:15px;">
@@ -717,27 +776,6 @@ document.getElementById("addBuff").onclick=()=>{
 };
 
 // ===== Combat =====
-function populateInitSelect() {
-  const initSelect = document.getElementById("initInput");
-  if (!initSelect) return;
-
-  // Vider la liste actuelle (sauf la première option)
-  const defaultOption = initSelect.firstElementChild;
-  initSelect.innerHTML = "";
-  initSelect.appendChild(defaultOption);
-
-  // Ajouter les options de 1 à 20
-  for (let i = 1; i <= 20; i++) {
-    const option = document.createElement("option");
-    option.value = i;
-    option.textContent = i;
-    initSelect.appendChild(option);
-  }
-}
-
-// Appeler au chargement
-populateInitSelect();
-
 function renderCharSelect() {
   const sel = document.getElementById("charSelect");
 
@@ -787,9 +825,9 @@ document.getElementById("addToCombat").onclick=()=>{
   }
   let participant;
   if(char.type==="ennemi"){
-    participant = {id:Date.now(), charId:char.id, name:participantName, initiative:totalInit, hp:0, maxHp:null, sp:0, team:char.type, activeBuffs:[]};
+    participant = {id:Date.now(), charId:char.id, name:participantName, baseInit:char.baseInit, initiative:totalInit, hp:0, maxHp:null, sp:0, team:char.type, activeBuffs:[]};
   } else {
-    participant = {id:Date.now(), charId:char.id, name:participantName, initiative:totalInit, hp:char.maxHp, maxHp:char.maxHp, sp:0, team:char.type, activeBuffs:[]};
+    participant = {id:Date.now(), charId:char.id, name:participantName, baseInit:char.baseInit, initiative:totalInit, hp:char.maxHp, maxHp:char.maxHp, sp:0, team:char.type, activeBuffs:[]};
   }
   data.combat.participants.push(participant);
   saveData();renderCombat();renderCharSelect();
@@ -1240,7 +1278,34 @@ function changeModalSp(delta) {
   updateHpModalDisplay();
 }
 
-function closeHpModal() {
+// Demande de confirmation avant de réinitialiser les HP
+function confirmResetHp() {
+  showConfirm(
+    "Êtes-vous sûr de vouloir réinitialiser les PV/PV temporaires ?",
+    () => {
+      if (currentHpParticipant) {
+        currentHpParticipant.hp = currentHpParticipant.maxHp || 0;
+        currentHpParticipant.sp = 0;
+        modalHpTemp = 0;
+        modalSpTemp = 0;
+        validateHpModal();
+      }
+    },
+    "Oui",
+    "Non"
+  );
+}
+
+// Annuler la modification
+function cancelHpModal() {
+  document.getElementById("hpModal").style.display = "none";
+  document.getElementById("spModal").style.display="flex";
+  currentHpParticipant = null;
+  modalHpTemp = 0;
+  modalSpTemp = 0;
+}
+
+function validateHpModal() {
   if (currentHpParticipant && modalHpTemp !== 0) {
     currentHpParticipant.hp += modalHpTemp;
   }
@@ -1258,32 +1323,77 @@ function closeHpModal() {
 }
 
 let currentInitParticipant = null;
+let modalInitTemp = 0;
 
 // Ouvrir le modal d’initiative
-function openInitModal(participantId) {
-  currentInitParticipant = data.combat.participants.find(p => p.id === participantId);
-  if (!currentInitParticipant) return;
-
-  document.getElementById("initModalName").textContent = currentInitParticipant.name;
-  document.getElementById("initModalDisplay").textContent = `🎲  ${currentInitParticipant.initiative}`;
+function openInitModal(id) {
+  const p = data.combat.participants.find(x => x.id === id);
+  if (!p) return;
+  
+  currentInitParticipant = p;
+  modalInitTemp = 0; // reset variation
+  
+  document.getElementById("initModalName").textContent = p.name;
+  updateInitModalDisplay();
 
   document.getElementById("initModal").style.display = "flex";
 }
 
+function updateInitModalDisplay() {
+    displayInit = document.getElementById("initModalDisplay")
+    const p = currentInitParticipant;
+    if (!p) return;
+    
+    if (modalInitTemp === 0) {
+        displayInit.textContent = `${p.initiative} 🎲`;
+    } else {
+        const sign = modalInitTemp > 0 ? "+" : "";
+        displayInit.textContent = `${p.initiative + modalInitTemp} 🎲 (${sign}${modalInitTemp})`;
+    }
+}
+
 // Changer la valeur d’initiative
 function changeModalInit(delta) {
-  if (!currentInitParticipant) return;
+    if (!currentInitParticipant) return;
+    
+    const p = currentInitParticipant;
+    modalInitTemp += delta;
+    
+    updateInitModalDisplay();
+}
 
-  currentInitParticipant.initiative += delta;
-  saveData();
-  renderCombat();
-  openInitModal(currentInitParticipant.id); // rafraîchir
+// Demande de confirmation avant de réinitialiser l'Initiative
+function confirmResetInit() {
+  showConfirm(
+    "Êtes-vous sûr de vouloir réinitialiser l'initiative a sa valeur de base ?",
+    () => {
+      if (currentInitParticipant) {
+        currentInitParticipant.initiative = currentInitParticipant.baseInit;
+        modalInitTemp = 0;
+        validateInitModal();
+      }
+    },
+    "Oui",
+    "Non"
+  );
 }
 
 // Fermer le modal
-function closeInitModal() {
+function cancelInitModal() {
   document.getElementById("initModal").style.display = "none";
   currentInitParticipant = null;
+  modalInitTemp = 0;
+}
+
+function validateInitModal() {
+  document.getElementById("initModal").style.display = "none";
+  if (currentInitParticipant && modalInitTemp !== 0) {
+      currentInitParticipant.initiative += modalInitTemp;
+    }
+    saveData();
+    renderCombat();
+    currentInitParticipant = null;
+    modalInitTemp = 0;
 }
 
 // Ouvre le menu d’options
@@ -1322,28 +1432,33 @@ renderAll();
 <!-- Modal gestion PV -->
 <div id="hpModal" class="modal">
   <div class="modal-content">
+    <button id="resetHpBtn" class="reset-btn" onclick="confirmResetHp()">🔄 </button>
     <h3 id="hpModalName"></h3>
     <div id="spModal" class="pv-control" style="margin-top: 16px;">
-      <button class="small" onclick="changeModalSp(-5)">-5</button>
+      <button class="small" onclick="changeModalSp(-10)">-10</button>
       <button class="small" onclick="changeModalSp(-1)">-1</button>
       <div id="spModalDisplay" class="pv-display"></div>
       <button class="small" onclick="changeModalSp(1)">+1</button>
-      <button class="small" onclick="changeModalSp(5)">+5</button>
+      <button class="small" onclick="changeModalSp(10)">+10</button>
     </div>
     <div class="pv-control">
-      <button class="small" onclick="changeModalHp(-5)">-5</button>
+      <button class="small" onclick="changeModalHp(-10)">-10</button>
       <button class="small" onclick="changeModalHp(-1)">-1</button>
       <div id="hpModalDisplay" class="pv-display"></div>
       <button class="small" onclick="changeModalHp(1)">+1</button>
-      <button class="small" onclick="changeModalHp(5)">+5</button>
+      <button class="small" onclick="changeModalHp(10)">+10</button>
     </div>
-    <button onclick="closeHpModal()">Fermer</button>
+    <div class="modal-buttons">
+          <button class="cancel" onclick="cancelHpModal()">Annuler</button>
+          <button class="validate" onclick="validateHpModal()">Valider</button>
+    </div>
   </div>
 </div>
 
 <!-- Modal gestion Initiative -->
 <div id="initModal" class="modal">
   <div class="modal-content">
+    <button id="resetInitBtn" class="reset-btn" onclick="confirmResetInit()">🔄 </button>
     <h3 id="initModalName"></h3>
     <div class="init-control">
       <button class="small" onclick="changeModalInit(-5)">-5</button>
@@ -1352,7 +1467,10 @@ renderAll();
       <button class="small" onclick="changeModalInit(1)">+1</button>
       <button class="small" onclick="changeModalInit(5)">+5</button>
     </div>
-    <button onclick="closeInitModal()">Fermer</button>
+    <div class="modal-buttons">
+      <button class="cancel" onclick="cancelInitModal()">Annuler</button>
+      <button class="validate" onclick="validateInitModal()">Valider</button>
+    </div>
   </div>
 </div>
 </body>
