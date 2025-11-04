@@ -115,6 +115,15 @@ button.remove-small:hover {
   background: #d55;
 }
 
+#initInput {
+  font-size: 1rem;
+  padding: 6px;
+  border-radius: 6px;
+  border: 1px solid #555;
+  background: #2b2b2b;
+  color: #fff;
+}
+
 .subtabs { display:flex; gap:6px; margin-bottom:8px; }
 .subtab-btn {
   flex:1;
@@ -225,7 +234,8 @@ button.remove-small:hover {
 
 #hpModal .pv-display {
   flex: 0 0 auto;
-  min-width: 60px;
+  width: 170px;
+  max-width: 50%;
   text-align: center;
   padding: 6px;
   background: #333;
@@ -233,6 +243,11 @@ button.remove-small:hover {
   border: 1px solid #555;
   color: #fff;
   font-weight: bold;
+}
+
+#hpModal .small {
+  padding: 4px 10px;
+  font-size: 0.9rem;
 }
 
 /* Gestion Initiative modal */
@@ -292,8 +307,8 @@ button.remove-small:hover {
 }
 .modal-content {
   background: #222; padding: 20px;
-  border-radius: 10px; width: 80%;
-  max-width: 300px; text-align: center;
+  border-radius: 10px; width: 100%;
+  max-width: 340px; text-align: center;
 }
 
 .hp-bar-container {
@@ -370,7 +385,9 @@ h2{font-size:1.1rem;} button{font-size:0.9rem;} input,select{font-size:0.9rem;}
     <div class="combat-top">
       <div class="flex">
         <select id="charSelect"></select>
-        <input id="initInput" type="number" placeholder="Jet d'initiative">
+        <select id="initInput">
+          <option value="" disabled selected>Jet d'initiative</option>
+        </select>
         <button id="addToCombat">Rejoindre !</button>
       </div>
 
@@ -700,6 +717,27 @@ document.getElementById("addBuff").onclick=()=>{
 };
 
 // ===== Combat =====
+function populateInitSelect() {
+  const initSelect = document.getElementById("initInput");
+  if (!initSelect) return;
+
+  // Vider la liste actuelle (sauf la première option)
+  const defaultOption = initSelect.firstElementChild;
+  initSelect.innerHTML = "";
+  initSelect.appendChild(defaultOption);
+
+  // Ajouter les options de 1 à 20
+  for (let i = 1; i <= 20; i++) {
+    const option = document.createElement("option");
+    option.value = i;
+    option.textContent = i;
+    initSelect.appendChild(option);
+  }
+}
+
+// Appeler au chargement
+populateInitSelect();
+
 function renderCharSelect() {
   const sel = document.getElementById("charSelect");
 
@@ -1135,68 +1173,88 @@ function resetCombat() {
 }
 
 let currentHpParticipant = null;
+let modalHpTemp = 0; // pour tracer les modifs temporaires
+let modalSpTemp = 0; // pour tracer les modifs temporaires
 
 function openHpModal(id) {
   const p = data.combat.participants.find(x => x.id === id);
   if (!p) return;
 
   currentHpParticipant = p;
+  modalHpTemp = 0; // reset variation
+  modalSpTemp = 0; // reset variation
 
   // Remplir les infos du modal
   document.getElementById("hpModalName").textContent = p.name;
   updateHpModalDisplay();
-  
-  document.getElementById("spModalDisplay").textContent =
-    `${p.sp || 0}🛡️`;
-  if (p.team === "ennemi") {
-      document.getElementById("spModal").style.display="none";
-  }
 
   // Afficher le modal
   document.getElementById("hpModal").style.display = "flex";
 }
 
-function closeHpModal() {
-  currentHpParticipant = null;
-  document.getElementById("spModal").style.display="flex";
-  document.getElementById("hpModal").style.display = "none";
-}
-
 function updateHpModalDisplay() {
-  const display = document.getElementById("hpModalDisplay");
+  const displayHp = document.getElementById("hpModalDisplay");
+  const displaySp = document.getElementById("spModalDisplay");
   const p = currentHpParticipant;
   if (!p) return;
-
-  // Format d'affichage des PV selon type
-  display.textContent = p.team === "ennemi" 
-    ? `${p.hp} 🩸`
-    : `${p.hp}/${p.maxHp} ❤️`;
+  if (p.team === "ennemi") {
+        document.getElementById("spModal").style.display="none";
+  }
+  
+  if (modalHpTemp === 0) {
+      displayHp.textContent = p.team === "ennemi" 
+          ? `${p.hp} 🩸`
+          : `${p.hp}/${p.maxHp} ❤️`;
+    } else {
+      const sign = modalHpTemp > 0 ? "+" : "";
+      displayHp.textContent = p.team === "ennemi" 
+          ? `${p.hp + modalHpTemp} 🩸 (${sign}${modalHpTemp})`
+          : `${p.hp + modalHpTemp}/${p.maxHp} ❤️ (${sign}${modalHpTemp})`;
+    }
+  if (modalSpTemp === 0) {
+      displaySp.textContent = `${p.sp} 🛡`;
+  } else {
+      const sign = modalSpTemp > 0 ? "+" : "";
+      displaySp.textContent = `${p.sp + modalSpTemp} 🛡 (${sign}${modalSpTemp})`;
+  }
 }
 
 function changeModalHp(delta) {
   if (!currentHpParticipant) return;
 
   const p = currentHpParticipant;
-
   if (p.team === "ennemi") {
-    p.hp = Math.max(0, p.hp + delta);
+      modalHpTemp = Math.max(- p.hp, modalHpTemp + delta);
   } else {
-    p.hp = Math.max(-10, Math.min(p.maxHp, p.hp + delta));
+      modalHpTemp = Math.max(-10 - p.hp, Math.min(p.maxHp - p.hp, modalHpTemp + delta));
   }
-
-  saveData();
   updateHpModalDisplay();
-  renderCombat();
 }
 
 function changeModalSp(delta) {
   if (!currentHpParticipant) return;
 
-  currentHpParticipant.sp = Math.max(0, (currentHpParticipant.sp || 0) + delta);
+  const p = currentHpParticipant;
+  modalSpTemp = Math.max(- p.sp, modalSpTemp + delta);
 
+  updateHpModalDisplay();
+}
+
+function closeHpModal() {
+  if (currentHpParticipant && modalHpTemp !== 0) {
+    currentHpParticipant.hp += modalHpTemp;
+  }
+  if (currentHpParticipant && modalSpTemp !== 0) {
+    currentHpParticipant.sp += modalSpTemp
+  }
   saveData();
   renderCombat();
-  openHpModal(currentHpParticipant.id); // rafraîchir modale
+  currentHpParticipant = null;
+  modalHpTemp = 0;
+  modalSpTemp = 0;
+  
+  document.getElementById("hpModal").style.display = "none";
+  document.getElementById("spModal").style.display="flex";
 }
 
 let currentInitParticipant = null;
