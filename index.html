@@ -131,20 +131,61 @@ button.remove-small:hover {
   background: none;
 }
 
-.dice-roll {
+/* Dé 3D réaliste */
+.d20 {
+  width: 28px;
+  height: 28px;
+  margin: 2px;
+  bottom: 1px;
+  right: 1px;
+  perspective: 500px;
+  cursor: pointer;
   position: relative;
-  padding: 1px 2px;
-  font-size: 1.8rem;
-  border-radius: 6px;
-  top: 0px;
-  right: 0px; /* ajuste selon l’endroit du bouton 🎲 */
-  animation: rollDice 1s ease-out forwards;
 }
 
-@keyframes rollDice {
-  0% { transform: rotate(0deg); opacity: 1; }
-  
-  100% { transform: rotate(720deg); opacity: 1; }
+.d20-inner {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+}
+
+.d20 .face {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border: 1.5px solid #05b;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.85rem;
+  color: #fff;
+  background: radial-gradient(circle at 30% 30%, #111, #000);
+  box-shadow: inset 0 0 8px #0ff3, 0 0 5px #0ff2;
+  backface-visibility: hidden; /* ✅ empêche les doublons en rotation */
+}
+
+/* 6 faces orientées en 3D */
+.face.front  { transform: translateZ(15px); }
+.face.back   { transform: rotateY(180deg) translateZ(15px); }
+.face.right  { transform: rotateY(90deg) translateZ(15px); }
+.face.left   { transform: rotateY(-90deg) translateZ(15px); }
+.face.top    { transform: rotateX(90deg) translateZ(15px); }
+.face.bottom { transform: rotateX(-90deg) translateZ(15px); }
+
+.d20.rolling .d20-inner {
+  animation: spinAndRoll 1.5s ease-in-out infinite;
+}
+
+/* Rotation combinée pour un effet plus aléatoire */
+@keyframes spinAndRoll {
+  0%   { transform: rotateX(0deg) rotateY(0deg); }
+  25%  { transform: rotateX(180deg) rotateY(90deg); }
+  50%  { transform: rotateX(360deg) rotateY(180deg); }
+  75%  { transform: rotateX(540deg) rotateY(270deg); }
+  100% { transform: rotateX(720deg) rotateY(360deg); }
 }
 
 #initInput {
@@ -206,7 +247,7 @@ button.remove-small:hover {
 }
 
 /* Combat scrollable */
-#combatContent { display:flex; flex-direction:column; height:calc(100% - 100px); }
+#combatContent { display:flex; flex-direction:column; height:calc(100% - 105px); }
 .combat-top { flex-shrink:0; padding:10px; background:#2a2a2a; border-bottom:1px solid #444; display:flex; flex-direction:column; gap:8px; }
 .combat-list { flex:1; overflow-y:auto; padding:8px;}
 .combat-bottom { flex-shrink:0; position: sticky; bottom: calc(64px + env(safe-area-inset-bottom)); padding:8px; background:#2a2a2a; border-top:1px solid #444; display:flex; justify-content:space-between; gap:2px; }
@@ -478,9 +519,19 @@ h2{font-size:1.1rem;} button{font-size:0.9rem;} input,select{font-size:0.9rem;}
       <div class="flex">
         <select id="charSelect"></select>
         <input id="initInput" type="number" inputmode="numeric" pattern="[0-9]*" placeholder="Init" onfocus="this.select()" onclick="this.select()">
-        <button id="rollInit">🎲</button>
-        <div id="diceRoll" class="dice-roll" style="display:none;">🎲</div>
         <button id="addToCombat">Rejoindre !</button>
+        <div id="d20Container" style="position:relative; display:flex; align-items:center;">
+          <div id="rollD20Btn" class="d20" title="Lancer un D20">
+            <div class="d20-inner">
+              <div class="face front">?</div>
+              <div class="face back"></div>
+              <div class="face left"></div>
+              <div class="face right"></div>
+              <div class="face top"></div>
+              <div class="face bottom"></div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Buffs globaux et round -->
@@ -496,10 +547,10 @@ h2{font-size:1.1rem;} button{font-size:0.9rem;} input,select{font-size:0.9rem;}
           </div>
           <button id="applyBuffGlobal">Lancer</button>
         </div>
-        <div>Round : <span id="roundDisplay">0</span>
-          (<span id="secondDisplay">6</span><span id="secondLabel"> secondes</span>)</div>
       </div>
-
+      <div class="flex" style="margin:0;">
+        <div>Round : <span id="roundDisplay">0</span> (<span id="secondDisplay">6</span><span id="secondLabel"> secondes</span>)</div>
+      </div>
     </div>
     <div class="combat-list" id="combatList"></div>
     <div class="combat-bottom">
@@ -556,8 +607,8 @@ h2{font-size:1.1rem;} button{font-size:0.9rem;} input,select{font-size:0.9rem;}
   <h2>✨ Buffs</h2>
   <div class="flex">
     <input id="buffName" placeholder="Nom">
-    <input id="buffValue" placeholder="Valeur">
     <input id="buffDuration" inputmode="numeric" pattern="[0-9]*" placeholder="Durée" onfocus="this.select()" onclick="this.select()">
+    <input id="buffValue" placeholder="Description">
     <button id="addBuff">Ajouter</button>
   </div>
   <div class="list" id="buffList"></div>
@@ -606,6 +657,31 @@ h2{font-size:1.1rem;} button{font-size:0.9rem;} input,select{font-size:0.9rem;}
     <div style="display:flex;justify-content:space-between;margin-top:15px;">
       <button onclick="closeCharEdit()" style="background:#b33;">Annuler</button>
       <button onclick="validateCharEdit()" style="background:#2e8b57;">Valider</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modale d’édition de Buff -->
+<div id="buffEditModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); align-items:center; justify-content:center; z-index:200;">
+  <div style="background:#2b2b2b; padding:20px; border-radius:10px; width:90%; max-width:300px; box-shadow:0 0 10px #000; color:#fff;">
+    <h3 id="buffEditTitle" style="text-align:center; margin-bottom:15px;">Modifier le buff</h3>
+    <div style="flex-direction:column; gap:12px;">
+      <div class="modal-field">
+        <label>Nom</label>
+        <input id="editBuffName" type="text">
+      </div>
+      <div class="modal-field">
+        <label>Durée (tours)</label>
+        <input id="editBuffDuration" type="number">
+      </div>
+      <div class="modal-field">
+        <label>Description</label>
+        <input id="editBuffValue" type="text">
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:15px;">
+      <button onclick="closeBuffEditModal()" style="background:#b33;">Annuler</button>
+      <button onclick="saveBuffEdit()" style="background:#2e8b57;">Valider</button>
     </div>
   </div>
 </div>
@@ -795,11 +871,15 @@ function renderBuffs(){
   const buffList=document.getElementById("buffList"); buffList.innerHTML="";
   data.buffs.forEach(b=>{
     const div=document.createElement("div");
-    div.className="buff";
-    div.innerHTML=`<b>${b.name}</b> (${b.value||"?"}) — ${b.defaultDuration} tours <button class="remove-small" onclick="deleteBuff(${b.id})">❌</button>`;
+    div.className="flex";
+    div.innerHTML=`
+       <div onclick="openBuffEditModal(${b.id})" style="flex:1;color:#fff;cursor:pointer;">
+          <span style="font-weight:bold;">${b.name}</span> (${b.defaultDuration || 1}${b.defaultDuration > 1 ? " tours" : " tour"}) — ${b.value || "?"}</div>
+        <button class="remove-small" onclick="deleteBuff(${b.id})">❌</button>`;
     buffList.appendChild(div);
   });
 }
+
 function deleteBuff(id){data.buffs=data.buffs.filter(b=>b.id!==id);saveData();renderBuffs();}
 document.getElementById("addBuff").onclick=()=>{
   const name=document.getElementById("buffName").value;
@@ -809,6 +889,42 @@ document.getElementById("addBuff").onclick=()=>{
   data.buffs.push({id:Date.now(),name,value,defaultDuration:duration});
   saveData();document.getElementById("buffName").value="";document.getElementById("buffValue").value="";document.getElementById("buffDuration").value="";renderBuffs();
 };
+
+let currentBuffEditId = null;
+
+function openBuffEditModal(buffId) {
+  const buff = data.buffs.find(b => b.id === buffId);
+  if (!buff) return;
+
+  currentBuffEditId = buffId;
+
+  document.getElementById("buffEditTitle").textContent = buff.name;
+  document.getElementById("editBuffName").value = buff.name;
+  document.getElementById("editBuffValue").value = buff.value || "";
+  document.getElementById("editBuffDuration").value = buff.defaultDuration || 1;
+
+  document.getElementById("buffEditModal").style.display = "flex";
+}
+
+function closeBuffEditModal() {
+  document.getElementById("buffEditModal").style.display = "none";
+  currentBuffEditId = null;
+}
+
+function saveBuffEdit() {
+  if (!currentBuffEditId) return;
+
+  const buff = data.buffs.find(b => b.id === currentBuffEditId);
+  if (!buff) return;
+
+  buff.name = document.getElementById("editBuffName").value.trim();
+  buff.value = document.getElementById("editBuffValue").value.trim();
+  buff.defaultDuration = parseInt(document.getElementById("editBuffDuration").value) || 1;
+
+  saveData();
+  renderBuffs();
+  closeBuffEditModal();
+}
 
 // ===== Combat =====
 function renderCharSelect() {
@@ -845,33 +961,82 @@ function renderCharSelect() {
   }
 }
 
-// 🎲 Bouton de lancer de dé pour l'initiative
-document.getElementById("rollInit").onclick = () => {
-  const roll = Math.floor(Math.random() * 20) + 1;
-  const dice = document.getElementById("diceRoll");
-  const initInput = document.getElementById("initInput");
+const d20 = document.getElementById("rollD20Btn");
+const d20Inner = d20.querySelector(".d20-inner");
+const faces = d20.querySelectorAll(".face");
+const initInput = document.getElementById("initInput");
+const addButton = document.getElementById("addToCombat");
 
-  // Affiche le dé et lance l’animation
-  document.getElementById("rollInit").style.display = "none";
-  dice.style.display = "block";
-  dice.style.animation = "rollDice 1s ease-out forwards";
+let lastRollResult = null; // on garde le résultat pour l'ajouter au perso
 
-  // Après l’animation, cache le dé et met la valeur dans l’input
+d20.addEventListener("click", async () => {
+  if (d20.classList.contains("rolling")) return; // empêche de relancer en boucle
+  d20.classList.add("rolling");
+  d20.disabled = true;
+  lastRollResult = null;
+
+  let rollDuration = 1000; // durée totale du roulement
+  const start = Date.now();
+
+  // Pendant le roulement : changer les chiffres à intervalle régulier
+  const interval = setInterval(() => {
+    faces.forEach(face => {
+      face.textContent = Math.floor(Math.random() * 20) + 1;
+    });
+  }, 100);
+
+  // Attendre la fin du roulement
+  await new Promise(r => setTimeout(r, rollDuration));
+
+  // Stopper la rotation
+  clearInterval(interval);
+  d20.classList.remove("rolling");
+  d20.disabled = false;
+
+  // Tirer le vrai résultat final
+  const result = Math.floor(Math.random() * 20) + 1;
+  faces.forEach(face => face.textContent = result);
+  lastRollResult = result;
   setTimeout(() => {
-    document.getElementById("rollInit").style.display = "block";
-    dice.style.display = "none";
-    initInput.value = roll;
-    initInput.focus();
-    initInput.select();
-  }, 1000); // correspond à la durée de l’animation
-};
+    faces.forEach(face => face.textContent = "?");
+  }, 1200);
+
+  // 💥 Effet visuel de “critique” si 20
+  if (result === 20) {
+    faces.forEach(face => face.style.color = "#ff0");
+    d20Inner.style.boxShadow = "0 0 20px #ff0";
+    setTimeout(() => {
+      faces.forEach(face => face.style.color = "#fff");
+      d20Inner.style.boxShadow = "none";
+    }, 1200);
+  } else if (result === 1) {
+    faces.forEach(face => face.style.color = "#f00");
+    d20Inner.style.boxShadow = "0 0 20px #f00";
+    setTimeout(() => {
+      faces.forEach(face => face.style.color = "#fff");
+      d20Inner.style.boxShadow = "none";
+    }, 1200);
+  } else {
+    faces.forEach(face => face.style.color = "#fff");
+    d20Inner.style.boxShadow = "0 0 20px #fff";
+    setTimeout(() => {
+      d20Inner.style.boxShadow = "none";
+    }, 1200);
+  }
+  
+  addButton.click();
+});
 
 document.getElementById("addToCombat").onclick=()=>{
   const charId=parseInt(document.getElementById("charSelect").value);
   const char=data.characters.find(c=>c.id===charId);
   if(!char) return;
-  const initInput = parseInt(document.getElementById("initInput").value) || 0;
-  const totalInit = initInput + (char.baseInit || 0); // ajoute le score de base
+  // 🧮 Utilise le dernier jet de dé si dispo, sinon la valeur saisie manuellement
+  const rollValue = lastRollResult ?? (parseInt(document.getElementById("initInput").value) || 0);
+  const totalInit = rollValue + (char.baseInit || 0); // ajoute le score de base
+  // on remet le résultat à null pour éviter les doublons sur un prochain ajout
+  lastRollResult = null;
+    
   let sameNameCount = data.combat.participants
     .filter(p => p.name.startsWith(char.name))
     .length;
@@ -1051,7 +1216,7 @@ function renderCombat() {
         <div class="buff-option" 
              data-id="${b.id}"
              style="padding:6px 8px;cursor:pointer;border-bottom:1px solid #333;">
-          ${b.name} (${b.value})
+          ${b.name} (${b.defaultDuration})
         </div>
       `).join('');
   
@@ -1463,8 +1628,8 @@ function closeSettingsModal() {
 }
 
 function clearLocalStorage() {
-    closeSettingsModal();
     showConfirm("Voulez-vous vraiment effacer toutes les données de l'application ?\n\nCela supprimera définitivement tous les personnages, buffs et combats.", () => {
+    closeSettingsModal();
     localStorage.clear();
     location.reload(); // recharge l'application dans son état initial
   });
