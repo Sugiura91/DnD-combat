@@ -703,7 +703,7 @@ h2{font-size:1.1rem;} button{font-size:0.9rem;} input,select{font-size:0.9rem;}
 let data = JSON.parse(localStorage.getItem("dndData")||"{}");
 if(!data.characters) data.characters=[];
 if(!data.buffs) data.buffs=[];
-if(!data.combat) data.combat={participants:[],round:1,currentIndex:-1};
+if(!data.combat) data.combat={participants:[],round:0,currentIndex:-1};
 function saveData(){localStorage.setItem("dndData",JSON.stringify(data));}
 
 // ===== Onglets =====
